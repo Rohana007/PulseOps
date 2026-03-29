@@ -225,6 +225,40 @@ to enable live routing where credentials are present.
 streamlit run main.py
 ```
 
+## Run With Docker
+
+### Docker Compose
+
+```bash
+docker compose up --build
+```
+
+The container serves PulseOps at:
+
+```text
+http://localhost:8501
+```
+
+Docker Compose uses:
+
+- `.env` for environment variables
+- a named Docker volume for the SQLite audit ledger
+
+### Notes For Live Google Integrations
+
+If you want Google Calendar or Google Sheets to work inside Docker, the service-account JSON must also be available inside the container.
+
+The simplest approach is:
+
+- keep local development on the host machine for Google-integrated demos, or
+- mount your service-account file into the container and set `GOOGLE_SERVICE_ACCOUNT_JSON` to the in-container path
+
+Example container path:
+
+```env
+GOOGLE_SERVICE_ACCOUNT_JSON=/app/secrets/service_account.json
+```
+
 ## Recommended Demo Flow
 
 ### Demo 1: Onboarding

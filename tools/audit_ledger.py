@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent.parent / "pulseops_audit.db"
+DB_PATH = Path(os.getenv("PULSEOPS_DB_PATH", "")).expanduser() if os.getenv("PULSEOPS_DB_PATH") else Path(__file__).resolve().parent.parent / "pulseops_audit.db"
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
 def init_db() -> None:

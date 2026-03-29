@@ -15,3 +15,5 @@ pulseops_audit.db
 *.log
 .cursor
 .mcps
+fluid-fiber-491707-s8-a78b1220e3f3.json
+service_account.json
