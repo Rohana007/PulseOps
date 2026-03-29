@@ -3,24 +3,25 @@
 PulseOps is an autonomous multi-agent enterprise operations system built for the ET AI Hackathon 2026.
 It handles onboarding, meeting follow-through, SLA recovery, and cross-agent handoffs with full auditability.
 
-## What It Does
+## Why PulseOps
 
 PulseOps is designed to solve three common enterprise workflow failures:
 
-- New-hire onboarding gets delayed across HR, IT, Slack, JIRA, and calendar systems
-- Meeting action items disappear because ownership is unclear or never tracked
-- Approvals breach SLA because the assigned approver is unavailable
+- new-hire onboarding gets delayed across HR, IT, Slack, JIRA, and calendar systems
+- meeting action items disappear because ownership is unclear or never tracked
+- approvals breach SLA because the assigned approver is unavailable
 
-Instead of using brittle rules, PulseOps uses a LangGraph-based orchestrator and specialist agents that reason before acting, recover from failures, hand off work automatically, and explain every decision.
+Instead of using brittle rules, PulseOps uses an orchestrator and specialist agents that reason before acting, recover from failures, hand off work automatically, and explain every decision.
 
-## Why It’s Different
+## What Makes It Different
 
-- ReAct architecture: each agent reasons before each tool call
-- Real multi-agent orchestration: the Orchestrator delegates to specialists
-- Exception handling: JIRA failures trigger retry, escalation, and monitoring
-- Audit-first design: every action is written to SQLite with thought + result
-- Real or mock integrations: Slack, JIRA, Google Calendar, Google Sheets, and Trello can run live or fall back safely
-- Ambiguity-safe behavior: the MeetingAgent never guesses unclear ownership
+- ReAct architecture: specialist execution supports reasoning traces before actions
+- real multi-agent orchestration: the Orchestrator delegates to specialists and triggers handoffs
+- hybrid planning: Gemini planning is supported, with deterministic fallback for demo reliability
+- exception handling: JIRA failures trigger retry, escalation, and monitoring
+- audit-first design: every meaningful action is written to SQLite with thought, result, and source
+- real or mock integrations: Slack, JIRA, Google Calendar, Google Sheets, and Trello can run live or fall back safely
+- ambiguity-safe behavior: the MeetingAgent never guesses unclear ownership
 
 ## Architecture
 
@@ -35,74 +36,86 @@ Orchestrator
    `- TicketMonitorAgent (auto-triggered handoff)
          |
          v
-     Audit Ledger + Explainer + Impact Dashboard
+API Router -> Real API / Mock API / Mock Fallback
+         |
+         v
+Audit Ledger -> Explainer -> Streamlit Dashboard
 ```
 
 ## Project Structure
 
 ```text
 pulseops/
-├── .env
-├── README.md
-├── config.py
-├── main.py
-├── requirements.txt
-├── agents/
-│   ├── orchestrator.py
-│   ├── react_engine.py
-│   ├── onboard_agent.py
-│   ├── meeting_agent.py
-│   └── sla_agent.py
-├── tools/
-│   ├── api_router.py
-│   ├── audit_ledger.py
-│   ├── mock_apis.py
-│   └── real_apis.py
-└── utils/
-    ├── explainer.py
-    └── impact_calculator.py
+|-- README.md
+|-- ARCHITECTURE_AND_IMPACT.md
+|-- DEMO_CHECKLIST.md
+|-- PITCH_SCRIPT.md
+|-- .env.example
+|-- config.py
+|-- main.py
+|-- requirements.txt
+|-- agents/
+|   |-- orchestrator.py
+|   |-- react_engine.py
+|   |-- onboard_agent.py
+|   |-- meeting_agent.py
+|   `-- sla_agent.py
+|-- tools/
+|   |-- api_router.py
+|   |-- audit_ledger.py
+|   |-- mock_apis.py
+|   `-- real_apis.py
+`-- utils/
+    |-- explainer.py
+    `-- impact_calculator.py
 ```
 
 ## Core Components
 
 ### Orchestrator
 
-[orchestrator.py](d:/et/pulseops/agents/orchestrator.py) is the supervisor.
-It interprets the enterprise event, builds an execution plan with Gemini, activates specialist agents, and triggers downstream handoffs when needed.
+[`agents/orchestrator.py`](agents/orchestrator.py) is the supervisor.
+It interprets the enterprise event, plans agent activation, delegates to specialists, monitors outcomes, and triggers downstream handoffs when needed.
+
+The current build keeps both modes:
+
+- Gemini-based planning when the model is available
+- deterministic fallback planning for demo reliability
 
 ### Specialist Agents
 
-- [onboard_agent.py](d:/et/pulseops/agents/onboard_agent.py): provisions employee workflows across HR, Slack, JIRA, orientation scheduling, and welcome messaging
-- [meeting_agent.py](d:/et/pulseops/agents/meeting_agent.py): parses transcript action items, creates tasks, and flags ambiguous ownership
-- [sla_agent.py](d:/et/pulseops/agents/sla_agent.py): handles approval rerouting and ticket SLA monitoring
+- [`agents/onboard_agent.py`](agents/onboard_agent.py): provisions employee workflows across HR, Slack, JIRA, orientation scheduling, and welcome messaging
+- [`agents/meeting_agent.py`](agents/meeting_agent.py): parses transcript action items, creates tasks, and flags ambiguous ownership
+- [`agents/sla_agent.py`](agents/sla_agent.py): handles approval rerouting and ticket SLA monitoring
 
 ### ReAct Engine
 
-[react_engine.py](d:/et/pulseops/agents/react_engine.py) runs the LangGraph ReAct loop, extracts the reasoning chain, logs tool outcomes, and records whether each tool call used a live integration or a mock.
+[`agents/react_engine.py`](agents/react_engine.py) contains the shared LangGraph ReAct runtime.
+The current demo keeps this capability in the codebase while specialist workflows use deterministic execution for stability.
 
 ### Routing Layer
 
-[api_router.py](d:/et/pulseops/tools/api_router.py) decides whether to use:
+[`tools/api_router.py`](tools/api_router.py) decides whether to use:
 
 - real APIs
 - mock APIs
 - mock fallback after a real API error
 
-This keeps the app demo-safe while still supporting real integration wow-factor.
+This keeps the app demo-safe while still supporting real integration value.
 
-### Audit + Explainability
+### Audit and Explainability
 
-- [audit_ledger.py](d:/et/pulseops/tools/audit_ledger.py): append-only SQLite audit trail
-- [explainer.py](d:/et/pulseops/utils/explainer.py): plain-English answer to “Why did you do that?”
+- [`tools/audit_ledger.py`](tools/audit_ledger.py): append-only SQLite audit trail
+- [`utils/explainer.py`](utils/explainer.py): plain-English answer to "Why did you do that?"
 
 ### Business Value Layer
 
-[impact_calculator.py](d:/et/pulseops/utils/impact_calculator.py) contains the benchmark-based business model used for submission materials and pitch math.
+[`utils/impact_calculator.py`](utils/impact_calculator.py) contains the benchmark-based business model used for submission materials and pitch math.
 The live dashboard now prioritizes observed run metrics so the product UI stays factual during demos.
 
 ## UI Features
 
-The Streamlit dashboard in [main.py](d:/et/pulseops/main.py) includes:
+The Streamlit dashboard in [`main.py`](main.py) includes:
 
 - premium dark control-room UI
 - API connection status bar
@@ -110,8 +123,8 @@ The Streamlit dashboard in [main.py](d:/et/pulseops/main.py) includes:
 - agent execution timeline
 - full thought chain view
 - live audit ledger
-- LIVE / MOCK / FALLBACK badges
-- observed metrics dashboard
+- live, mock, and fallback badges
+- observed workflow metrics
 - notification log
 - explainer panel
 
@@ -126,13 +139,11 @@ Use the following note anywhere you present these numbers:
 
 > These are benchmark-based estimates for judging and business modeling, not measured accounting outcomes from a production deployment.
 
-### Assumptions
+### Onboarding Assumptions
 
-#### Onboarding
-
-- Manual onboarding effort: `4.5 hours` per hire
-- Blended operations cost: `INR 1,500/hour`
-- Monthly hiring volume: `30 hires/month`
+- manual onboarding effort: `4.5 hours` per hire
+- blended operations cost: `INR 1,500/hour`
+- monthly hiring volume: `30 hires/month`
 
 Back-of-envelope math:
 
@@ -140,15 +151,11 @@ Back-of-envelope math:
 - `INR 6,750 x 30 = INR 202,500/month`
 - `INR 202,500 x 12 = INR 2,430,000/year`
 
-Pitch line:
+### Meeting Assumptions
 
-- PulseOps can reclaim roughly `INR 6,750` per hire in avoided manual operational effort, subject to team structure and process maturity.
-
-#### Meeting Action Items
-
-- Benchmark assumption: `40%` of action items are lost or delayed without structured follow-through
-- Conservative value per recovered task: `INR 2,500`
-- Example cadence: `4 meetings/month` with at least `4 clear action items` each
+- `40%` of action items are lost or delayed without structured follow-through
+- `INR 2,500` conservative value per recovered task
+- `4 meetings/month` with at least `4 clear action items` each
 
 Back-of-envelope math:
 
@@ -157,43 +164,18 @@ Back-of-envelope math:
 - `INR 4,000 x 4 = INR 16,000/month`
 - `INR 16,000 x 12 = INR 192,000/year`
 
-Pitch line:
+### SLA Assumptions
 
-- PulseOps improves follow-through by turning meeting output into tracked work while explicitly flagging ambiguity instead of guessing.
-
-#### SLA Recovery
-
-- Conservative avoided penalty per material breach: `INR 82,000`
-- Example operational volume: `200 approvals/month`
-- Without automation breach rate assumption: `8%`
-- With automation breach rate assumption: `0.5%`
+- avoided cost per material breach: `INR 82,000`
+- `200 approvals/month`
+- breach rate without automation: `8%`
+- breach rate with automation: `0.5%`
 
 Back-of-envelope math:
 
 - `200 x (8% - 0.5%) = 15` breaches prevented per month
 - `15 x INR 82,000 = INR 1,230,000/month`
 - `INR 1,230,000 x 12 = INR 14,760,000/year`
-
-Pitch line:
-
-- PulseOps reduces approval gridlock by detecting breaches early, rerouting blocked approvals, and preserving a full compliance trail.
-
-### Submission-Friendly Summary
-
-If you need one compact impact block for the architecture document or slide deck, use:
-
-- Onboarding: `INR 6,750` estimated operational effort saved per hire
-- Meetings: higher completion and accountability through structured task creation and ambiguity flagging
-- SLA: `INR 82,000` estimated avoided cost per prevented breach incident
-- Combined business case: meaningful operational savings even before adding enterprise software replacement value
-
-### Demo Guidance
-
-In the live product demo:
-
-- show observed metrics only
-- describe the impact model verbally or in the README / deck
-- state assumptions clearly if a judge asks how the numbers were derived
 
 ## Setup
 
@@ -204,6 +186,8 @@ pip install -r requirements.txt
 ```
 
 ### 2. Configure environment
+
+Copy `.env.example` to `.env` and fill in the values you want to use.
 
 Minimum mock-mode setup:
 
@@ -290,6 +274,12 @@ Show:
 - reroute action
 - compliance explanation
 
+## Submission Assets
+
+- architecture document: [`ARCHITECTURE_AND_IMPACT.md`](ARCHITECTURE_AND_IMPACT.md)
+- demo runbook: [`DEMO_CHECKLIST.md`](DEMO_CHECKLIST.md)
+- pitch script: [`PITCH_SCRIPT.md`](PITCH_SCRIPT.md)
+
 ## Real API Notes
 
 Best live demo path:
@@ -310,21 +300,11 @@ JIRA is supported, but user creation endpoints can be restricted depending on te
 
 ## Verification
 
-A quick syntax verification can be run with:
+You can run a quick syntax check with:
 
 ```bash
 python -m py_compile main.py config.py tools\real_apis.py tools\api_router.py agents\react_engine.py agents\onboard_agent.py agents\meeting_agent.py agents\sla_agent.py utils\impact_calculator.py
 ```
-
-## Pitch Summary
-
-PulseOps targets Indian mid-market companies that cannot afford enterprise automation suites like ServiceNow but still need robust, auditable, exception-aware operations automation.
-
-It is positioned as:
-
-- much cheaper than enterprise workflow suites
-- safer than brittle no-code automations
-- more transparent than black-box copilots
 
 ## License
 

@@ -1,11 +1,11 @@
 """
 PulseOps orchestrator agent.
 Receives enterprise events, delegates to specialists, and handles handoffs.
+Uses Gemini planning when available, with deterministic fallback for reliability.
 """
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import uuid
@@ -24,7 +24,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 _model = genai.GenerativeModel("gemini-2.0-flash")
 
 
-def _plan_with_gemini(event: str) -> list:
+def _deterministic_plan(event: str) -> list:
     """
     Build a deterministic execution plan from the incoming event.
     """
@@ -82,6 +82,51 @@ def _plan_with_gemini(event: str) -> list:
             "input": "EMP-2026-001",
         }
     ]
+
+
+def _plan_with_gemini(event: str) -> list:
+    """
+    Try Gemini-based planning first, then fall back to deterministic routing.
+    """
+    prompt = f"""
+You are the PulseOps orchestrator.
+Choose only the specialist agents needed for the enterprise event below.
+
+Available agents:
+- OnboardAgent: onboarding and access setup
+- MeetingAgent: transcript processing and task creation
+- SLAAgent: approval recovery and SLA rerouting
+
+Return only a JSON array with items in this format:
+[
+  {{
+    "agent": "OnboardAgent",
+    "reason": "why this agent is needed",
+    "priority": 1,
+    "depends_on": null,
+    "input": "what to pass"
+  }}
+]
+
+Enterprise event: {event}
+"""
+    try:
+        response = _model.generate_content(prompt)
+        text = (response.text or "").strip()
+        text = re.sub(r"^```json\s*|^```\s*|```$", "", text, flags=re.MULTILINE).strip()
+        if not text:
+            raise ValueError("Gemini returned empty planner output")
+        import json
+
+        plan = json.loads(text)
+        if not isinstance(plan, list) or not plan:
+            raise ValueError("Gemini planner output was not a non-empty list")
+        for item in plan:
+            if not isinstance(item, dict) or "agent" not in item:
+                raise ValueError("Gemini planner output contained invalid items")
+        return sorted(plan, key=lambda item: item.get("priority", 1))
+    except Exception:
+        return _deterministic_plan(event)
 
 
 def _check_for_handoffs(agent_name: str, result: dict, workflow_id: str) -> list:
