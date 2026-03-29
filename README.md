@@ -1,7 +1,45 @@
 # PulseOps
 
-PulseOps is an autonomous multi-agent enterprise operations system built for the ET AI Hackathon 2026.
-It handles onboarding, meeting follow-through, SLA recovery, and cross-agent handoffs with full auditability.
+Autonomous multi-agent enterprise operations for onboarding, meeting follow-through, SLA recovery, and audit-first exception handling.
+
+Built for the ET AI Hackathon 2026, PulseOps combines orchestrated specialist agents, real-or-mock integrations, and explainable execution in a demo-friendly Streamlit control room.
+
+## Quick Links
+
+- architecture and impact doc: [`ARCHITECTURE_AND_IMPACT.md`](ARCHITECTURE_AND_IMPACT.md)
+- demo runbook: [`DEMO_CHECKLIST.md`](DEMO_CHECKLIST.md)
+- pitch script: [`PITCH_SCRIPT.md`](PITCH_SCRIPT.md)
+- app entrypoint: [`main.py`](main.py)
+
+## At A Glance
+
+- multi-agent orchestration with specialist agents
+- hybrid planning: Gemini first, deterministic fallback
+- real and mock integrations with graceful degradation
+- full audit trail with thought, action, status, confidence, and source
+- plain-English explainability for non-technical reviewers
+- Docker and local run support
+
+## Quick Start
+
+### Local
+
+```bash
+pip install -r requirements.txt
+streamlit run main.py
+```
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+Open:
+
+```text
+http://localhost:8501
+```
 
 ## Why PulseOps
 
