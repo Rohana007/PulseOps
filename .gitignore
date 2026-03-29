@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.db
+.pytest_cache/
+.mypy_cache/
+.streamlit/
+fluid-fiber-491707-s8-a78b1220e3f3.json
